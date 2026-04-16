@@ -43,3 +43,15 @@ Este projeto usa deploy estático. Um arquivo `vercel.json` já está incluído 
 - O deploy é estático, então o app será servido diretamente pelo Vercel.
 - Para usar na prática em contas reais, valide a conexão WebSocket e as credenciais da API Deriv.
 - A garantia de resultados como "75% win" depende da lógica de trading e do ambiente de mercado. O deploy entrega a interface e o bot, mas não garante lucro automático.
+
+## Deploy automático via GitHub Actions
+
+O projeto agora inclui um workflow GitHub Actions em `.github/workflows/vercel-deploy.yml`.
+
+Para ativar deploys automáticos, adicione estes secrets no repositório GitHub:
+
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+
+Depois de adicionar os secrets, cada push em `main` acionará deploy em produção no Vercel.
