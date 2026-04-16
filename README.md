@@ -52,6 +52,13 @@ Para ativar deploys automáticos, adicione estes secrets no repositório GitHub:
 
 - `VERCEL_TOKEN`
 - `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+
+O `VERCEL_PROJECT_ID` está fixo no workflow para o projeto Vercel correto: `prj_QrwNWvrp3WZil0YilFW2DGS9sr4m`.
 
 Depois de adicionar os secrets, cada push em `main` acionará deploy em produção no Vercel.
+
+### Como encontrar o Vercel Org ID
+
+1. No dashboard Vercel, abra o projeto.
+2. Vá em **Settings** > **General**.
+3. O `Org ID` aparece no final da página ou no URL do painel de configurações.
