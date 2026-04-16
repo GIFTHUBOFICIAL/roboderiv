@@ -521,54 +521,60 @@ class TradingEngine {
         let callScore = 0;
         let putScore  = 0;
 
+const isPostLoss = this.lastLossAction !== undefined && this.lastLossAction !== null;
+        const lastLossAction = this.lastLossAction;
+
         // === VOTO 1: TENDÊNCIA ESTRUTURAL (EMA21 + Slope) ===
-        if (d.emaSlope > 0.3 && d.price > d.ema21) { callVotes++; callScore += 30; }
-        else if (d.emaSlope < -0.3 && d.price < d.ema21) { putVotes++; putScore += 30; }
+        if (d.emaSlope > 0.3 && d.price > d.ema21) { callVotes++; callScore += 30 * this.weights.trend; }
+        else if (d.emaSlope < -0.3 && d.price < d.ema21) { putVotes++; putScore += 30 * this.weights.trend; }
 
         // === VOTO 2: MOMENTUM OSCILATOR (RSI Sniper) ===
-        if (d.rsi > 61 && d.rsi < 80) { callVotes++; callScore += 25; }
-        else if (d.rsi < 39 && d.rsi > 20) { putVotes++; putScore += 25; }
+        if (d.rsi > 61 && d.rsi < 80) { callVotes++; callScore += 25 * this.weights.rsi; }
+        else if (d.rsi < 39 && d.rsi > 20) { putVotes++; putScore += 25 * this.weights.rsi; }
 
         // === VOTO 3: MOMENTUM TREND (MACD Hist) ===
-        if (d.macdHist > 0) { callVotes++; callScore += 20; }
-        else if (d.macdHist < 0) { putVotes++; putScore += 20; }
-
+        if (d.macdHist > 0) { callVotes++; callScore += 20 * this.weights.macd; }
+        else if (d.macdHist < 0) { putVotes++; putScore += 20 * this.weights.macd; }
 
         // === VOTO 4: BOLLINGER BREAKOUT (O Pulo do Gato) ===
-        // Se romper a banda com força, seguimos o estouro (Trend Follower)
-        if (d.price > d.bbUpper) { callVotes++; callScore += 20; }
-        else if (d.price < d.bbLower) { putVotes++; putScore += 20; }
+        if (d.price > d.bbUpper) { callVotes++; callScore += 20 * this.weights.volatility; }
+        else if (d.price < d.bbLower) { putVotes++; putScore += 20 * this.weights.volatility; }
 
         // === VOTO 5: MICRO-PULSO (Last 2 Ticks) ===
-        if (d.lastTickDiff > 0 && d.prevTickDiff > 0) callScore += 15;
-        else if (d.lastTickDiff < 0 && d.prevTickDiff < 0) putScore += 15;
+        if (d.lastTickDiff > 0 && d.prevTickDiff > 0) callScore += 15 * this.weights.momentum;
+        else if (d.lastTickDiff < 0 && d.prevTickDiff < 0) putScore += 15 * this.weights.momentum;
+
+        // === VOTO 6: STOCHASTICS DE CONFIRMAÇÃO ===
+        if (d.stochK < 30) { callVotes++; callScore += 12 * this.weights.stoch; }
+        else if (d.stochK > 70) { putVotes++; putScore += 12 * this.weights.stoch; }
 
         // 🛡️ FILTRO DE CONTRA-MÃO (Anti-Looping de Loss)
-        // Em mercado EXTREMA, proibir trades contra o RSI dominante
         if (d.volatility > 0.40) {
-            if (d.rsi > 70) putScore -= 100; // Proibido Vender em Super-Alta
-            if (d.rsi < 30) callScore -= 100; // Proibido Comprar em Super-Baixa
+            if (d.rsi > 70) putScore -= 100;
+            if (d.rsi < 30) callScore -= 100;
         }
 
-        if (d.isMomentumSpike)   { callScore -= 50; putScore -= 50; } // Choque térmico = Pausa instatânea
+        // Ajuste pós-loss: evita entrar no mesmo caminho repetidamente
+        if (isPostLoss) {
+            if (lastLossAction === 'CALL') putScore += 5;
+            if (lastLossAction === 'PUT') callScore += 5;
+        }
 
+        if (d.isMomentumSpike)   { callScore -= 50; putScore -= 50; }
 
-        // === CÁLCULO FINAL DE PONTUAÇÃO E DIREÇÃO ===
         const currentScore = Math.max(callScore, putScore);
         this.currentScore  = Math.max(0, currentScore);
         const action       = callScore >= putScore ? 'CALL' : 'PUT';
         const winVotes     = action === 'CALL' ? callVotes : putVotes;
         const loseVotes    = action === 'CALL' ? putVotes  : callVotes;
 
-        // === CONFIGURAÇÃO DO GATILHO ESPECIALISTA (Protocolo 75% Win) ===
-        let threshold = 35.0; 
-        if (d.volatility > 0.45) threshold += 8; // Sniper Mode em Caos
-        
-        // --- DINÂMICA ELITE: Se o score for > 50 (God-Tier), entramos com 1 tick ---
-        // Se for um sinal básico (35-50), exigimos 2 ticks para segurança.
-        const requiredTicks = (currentScore >= 50) ? 1 : 2; 
-        const confluenceOk  = winVotes >= 2;
+        let threshold = 35.0;
+        if (d.volatility > 0.45) threshold += 6;
+        if (isPostLoss) threshold += 1.5;
 
+        const requiredTicks = (currentScore >= 50) ? 1 : 2;
+        const adaptiveTicks = isPostLoss ? ((currentScore >= 55) ? 1 : 2) : requiredTicks;
+        const confluenceOk  = winVotes >= 2;
 
         if (!this._sigPersist) this._sigPersist = { action: null, count: 0 };
         if (this._sigPersist.action === action && confluenceOk) {
@@ -576,7 +582,7 @@ class TradingEngine {
         } else {
             this._sigPersist = { action, count: confluenceOk ? 1 : 0 };
         }
-        const signalPersisted = this._sigPersist.count >= requiredTicks;
+        const signalPersisted = this._sigPersist.count >= adaptiveTicks;
 
         // Atualiza Neural Scanner Live UI
         const scEl = document.getElementById('stat-score');
@@ -619,40 +625,52 @@ class TradingEngine {
         if (!this.stats) this.stats = { total: 0, wins: 0, losses: 0, lastResult: null };
 
         const BASE = 35.0;
-        const MAX  = 42.0; // Teto máximo — acima disso o bot para de operar
+        const MAX  = 42.0; // Teto máximo — acima disso o bot deve ficar mais seletivo
+
+        const adjustWeight = (key, delta) => {
+            this.weights[key] = Math.max(0.4, Math.min(3.0, this.weights[key] + delta));
+        };
 
         if (isWin) {
             const isRecovery = this.stats.lastResult === false;
-            // Reforça pesos dos indicadores que acertaram (suave)
-            if (d.macdHist !== undefined) this.weights.macd = Math.min(2.5, this.weights.macd + 0.04);
-            if (d.rsi !== undefined)      this.weights.rsi  = Math.min(2.5, this.weights.rsi  + 0.04);
-            // Relaxa threshold de volta ao base com wins consecutivos
-            this.threshold = Math.max(BASE, this.threshold - 0.3);
+            adjustWeight('trend', 0.05);
+            adjustWeight('rsi', 0.04);
+            adjustWeight('macd', 0.04);
+            adjustWeight('stoch', 0.03);
+            adjustWeight('volatility', 0.03);
+            adjustWeight('momentum', 0.03);
+
+            this.threshold = Math.max(BASE, this.threshold - 0.4);
             if (isRecovery && window.bot) {
                 window.bot.api.log(`🏆 [RECUPERAÇÃO] Padrão Elite confirmado! TH: ${this.threshold.toFixed(1)}`, 'success');
             }
         } else {
-            // ADAPTAÇÃO AGRESSIVA: Se errou, sobe o sarrafo imediatamente
-            this.threshold = Math.min(MAX, this.threshold + 2.0);
-            if (this.stats.currentStreak >= 2) {
-                this.threshold = Math.min(MAX, this.threshold + 2.0); // Salto duplo se streak de loss
-                if (window.bot) window.bot.api.log(`🛡️ [MODO SNIPER] Bloqueando ruído. TH: ${this.threshold.toFixed(1)}`, 'warning');
+            adjustWeight('trend', -0.06);
+            adjustWeight('rsi', -0.05);
+            adjustWeight('macd', -0.06);
+            adjustWeight('stoch', -0.05);
+            adjustWeight('volatility', -0.05);
+            adjustWeight('momentum', -0.04);
+
+            const lossPenalty = this.stats.currentStreak >= 3 ? 2.0 : 1.0;
+            this.threshold = Math.min(MAX, this.threshold + lossPenalty);
+            if (this.stats.currentStreak >= 2 && window.bot) {
+                window.bot.api.log(`🛡️ [POST-LOSS] Ajustando seletividade. TH: ${this.threshold.toFixed(1)}`, 'warning');
             }
         }
 
+        this.lastLossAction = isWin ? null : (d.action || this.lastLossAction);
         this.stats.lastResult = isWin;
         this.stats.total++;
         if (isWin) this.stats.wins++; else this.stats.losses++;
 
-        // Relatório a cada 10 trades
         if (this.stats.total % 10 === 0) {
             const wr = (this.stats.wins / this.stats.total * 100).toFixed(1);
             if (window.bot) window.bot.api.log(`📈 [CICLO] ${this.stats.total} trades | WR: ${wr}% | TH: ${this.threshold.toFixed(1)}`, 'info');
         }
 
-        // Limites de Segurança para Pesos
         Object.keys(this.weights).forEach(k => {
-            this.weights[k] = Math.max(0.2, Math.min(3.0, this.weights[k]));
+            this.weights[k] = Math.max(0.4, Math.min(3.0, this.weights[k]));
         });
     }
 
@@ -1620,7 +1638,7 @@ class App {
             this.api.log(`🎯 [EXECUTANDO] Nível ${this.levelIndex + 1} | Valor exato: $${currentStake.toFixed(2)}`, 'system');
             try {
                 this.stats.ghostLosses = 0; // Reseta após entrada real
-                this.lastAnalysisData = signal.analysis; // Captura para aprendizado
+                this.lastAnalysisData = signal; // Captura sinal completo para aprendizado posterior
                 const p = await this.api.send({ proposal: 1, amount: currentStake.toFixed(2), basis: 'stake', contract_type: signal.action, currency: 'USD', duration: 3, duration_unit: 't', symbol: 'R_75' }); // 3 Ticks: O equilíbrio perfeito para conta Real e Volatilidade Extrema
                 const b = await this.api.send({ buy: p.proposal.id, price: p.proposal.ask_price });
                 this.currentContractId = b.buy.contract_id;
