@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot R_75 - Deriv</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css?v=11.0">
+</head>
+
+<body class="dark-mode">
+    <div id="notification-container"></div>
+    <header>
+        <div class="header-left">
+            <div id="balance-group" class="header-balance">
+                <span id="current-balance" class="balance-val">$0.00</span>
+                <span id="session-pl" class="pl-val">+$0.00</span>
+            </div>
+            <div class="logo">
+                <span id="market-direction-icon" class="market-direction">●</span>
+            </div>
+            <div class="header-market">
+                <i class="fas fa-arrow-up market-up" id="market-icon-up" style="display:none"></i>
+                <i class="fas fa-arrow-down market-down" id="market-icon-down" style="display:none"></i>
+            </div>
+        </div>
+        <div class="header-center">
+            <span id="avg-trade-time" class="avg-time-val">--:--</span>
+        </div>
+        <div class="account-toggle">
+            <button id="sound-toggle" class="btn-icon" title="Ativar/Desativar Som">
+                <span id="sound-icon">🔊</span>
+            </button>
+            <span id="connection-dot" class="dot-status online"></span>
+            <span id="account-type-label">DEMO</span>
+            <label class="switch">
+                <input type="checkbox" id="account-toggle-input">
+                <span class="slider round"></span>
+            </label>
+            <span id="account-type-label-real">REAL</span>
+        </div>
+    </header>
+
+    <div id="sequence-bar" class="sequence-sticky-bar">
+        <div id="win-dots" class="dots-container"></div>
+        <span id="consecutive-wins" class="win-count-num">0</span>
+    </div>
+
+    <main class="dashboard">
+        <section class="top-row">
+            <div class="stats-grid">
+                <div class="card stat-card">
+                    <div class="icon-wrapper purple">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
+                            <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">ROI %</span>
+                        <h3 id="stat-roi" class="stat-val">0%</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M21 21H3V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M18 7L12 13L9 10L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">MAX.</span>
+                        <h3 id="max-sequence" class="stat-val">0 / 0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper green">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 4H8C6.89543 4 6 4.89543 6 6V18C6 19.1046 6.89543 20 8 20H16C17.1046 20 18 19.1046 18 18V6C18 4.89543 17.1046 4 16 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M12 11V15M9 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">TRADES</span>
+                        <h3 id="stat-total-trades" class="stat-val">0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper orange">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">META</span>
+                        <h3 id="stat-meta-progress" class="stat-val">0%</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper green">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">WIN %</span>
+                        <h3 id="stat-win-rate" class="stat-val up">0%</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper purple">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" />
+                            <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">LOSS %</span>
+                        <h3 id="stat-loss-rate" class="stat-val down">0%</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M20 4L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M15 4H20V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">RESULTADO</span>
+                        <h3 id="stat-result-rating" class="stat-val">---</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper orange">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">MERCADO</span>
+                        <h3 id="stat-volatility" class="stat-val">---</h3>
+                    </div>
+                </div>
+
+                <!-- NOVOS CARDS (VISUAIS) -->
+                <div class="card stat-card" style="display:none">
+                    <div class="icon-wrapper red">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">DRAWDOWN</span>
+                        <h3 id="stat-drawdown" class="stat-val down">0.00%</h3>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper green">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">PROFIT FACTOR</span>
+                        <h3 id="stat-profit-factor" class="stat-val">1.0</h3>
+                    </div>
+                </div>
+                <div class="card stat-card" style="display:none">
+                    <div class="icon-wrapper purple">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" />
+                            <circle cx="12" cy="12" r="3" fill="currentColor" />
+                            <path d="M12 22V12" stroke="currentColor" stroke-width="2" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">NEURAL SCANNER</span>
+                        <div class="stat-neural-row">
+                            <h3 id="stat-score" class="stat-val">SC: 0.0</h3>
+                            <span id="stat-rsi" class="stat-sub">RSI: 50</span>
+                        </div>
+                        <span id="stat-keyword" class="stat-status">ANALISANDO...</span>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">AVG TRADE</span>
+                        <h3 id="stat-avg-trade" class="stat-val">$ 0.00</h3>
+                    </div>
+                </div>
+
+                <!-- NOVOS 4 CARDS (VISUAIS - REALTIME) -->
+                <div class="card stat-card">
+                    <div class="icon-wrapper purple">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">MULTI-CONFLUENCE</span>
+                        <div class="conf-bars">
+                            <div class="conf-bar-row">
+                                <span class="conf-dir call">C</span>
+                                <div class="conf-bar-track"><div id="conf-bar-call" class="conf-bar-fill call-fill" style="width:0%"></div></div>
+                                <span id="conf-val-call" class="conf-val">0</span>
+                            </div>
+                            <div class="conf-bar-row">
+                                <span class="conf-dir put">P</span>
+                                <div class="conf-bar-track"><div id="conf-bar-put" class="conf-bar-fill put-fill" style="width:0%"></div></div>
+                                <span id="conf-val-put" class="conf-val">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card stat-card">
+                    <div class="icon-wrapper orange">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2"/>
+                            <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M3 3L6 6M21 3l-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">TESOURARIA</span>
+                        <h3 id="stat-tesouraria" class="stat-val tesouraria-val">0,00</h3>
+                    </div>
+                </div>
+                <div class="card stat-card" style="display:none">
+                    <div class="icon-wrapper green">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 4H4V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M20 4L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M15 4H20V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">SENSIBILIDADE</span>
+                        <h3 id="stat-sensitivity" class="stat-val">---</h3>
+                    </div>
+                </div>
+                <div class="card stat-card" style="display:none">
+                    <div class="icon-wrapper blue">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <div class="stat-data">
+                        <span class="label">PRECISÃO</span>
+                        <h3 id="stat-precision" class="stat-val">---</h3>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section class="card graph-card">
+            <div class="graph-container">
+                <canvas id="equityChart"></canvas>
+            </div>
+        </section>
+
+        <section class="card log-card">
+            <div class="card-header-between">
+                <div class="header-left-group">
+                    <span class="label">Log de Atividades</span>
+                    <div class="log-filters">
+                        <button class="btn-filter active" data-filter="all">Geral</button>
+                        <button class="btn-filter" data-filter="trade">Trades</button>
+                        <button class="btn-filter" data-filter="win">Win</button>
+                        <button class="btn-filter" data-filter="loss">Loss</button>
+                        <button class="btn-filter" data-filter="error">Erro</button>
+                    </div>
+                </div>
+                <button class="btn-clear" id="clear-logs">Limpar</button>
+            </div>
+            <div id="activity-log" class="log-container">
+                <div class="log-entry system">Aguardando inicialização do sistema...</div>
+            </div>
+        </section>
+
+        <section class="card health-card">
+            <div class="card-header-between">
+                <span class="label">Health Panel</span>
+                <div class="health-header-right">
+                    <span id="health-score-chip" class="health-score-chip">Health --%</span>
+                    <span id="health-updated-at" class="health-updated">--:--:--</span>
+                </div>
+            </div>
+            <div class="health-grid">
+                <div class="health-item" id="health-stream-item">
+                    <div class="health-top">
+                        <span class="health-name">STREAM</span>
+                        <span class="health-pill" id="health-stream-pill">---</span>
+                    </div>
+                    <div class="health-hint">Fluxo de ticks em tempo real</div>
+                    <div class="health-meta" id="health-stream-meta">Aguardando</div>
+                    <div class="health-meter"><span></span></div>
+                </div>
+                <div class="health-item" id="health-rtt-item">
+                    <div class="health-top">
+                        <span class="health-name">RTT</span>
+                        <span class="health-pill" id="health-rtt-pill">---</span>
+                    </div>
+                    <div class="health-hint">Latência média de resposta</div>
+                    <div class="health-meta" id="health-rtt-meta">Aguardando</div>
+                    <div class="health-meter"><span></span></div>
+                </div>
+                <div class="health-item" id="health-slippage-item">
+                    <div class="health-top">
+                        <span class="health-name">SLIPPAGE</span>
+                        <span class="health-pill" id="health-slippage-pill">---</span>
+                    </div>
+                    <div class="health-hint">Desvio entre decisão e execução</div>
+                    <div class="health-meta" id="health-slippage-meta">Aguardando</div>
+                    <div class="health-meter"><span></span></div>
+                </div>
+                <div class="health-item" id="health-reliability-item">
+                    <div class="health-top">
+                        <span class="health-name">RELIABILITY</span>
+                        <span class="health-pill" id="health-reliability-pill">---</span>
+                    </div>
+                    <div class="health-hint">Confiabilidade dos blocos de sinal</div>
+                    <div class="health-meta" id="health-reliability-meta">Aguardando</div>
+                    <div class="health-meter"><span></span></div>
+                </div>
+                <div class="health-item" id="health-tfa-item">
+                    <div class="health-top">
+                        <span class="health-name">TFA</span>
+                        <span class="health-pill" id="health-tfa-pill">---</span>
+                    </div>
+                    <div class="health-hint">Filtro de confirmação pós-loss</div>
+                    <div class="health-meta" id="health-tfa-meta">Aguardando</div>
+                    <div class="health-meter"><span></span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- NOTIFICATION CARD BELOW BADGE -->
+
+        <!-- NOTIFICATION CARD BELOW BADGE -->
+        <!-- TICK VISUALIZER (PREMIUM 15 CARDS) -->
+        <div id="floating-badge" class="floating-badge">
+            <div class="badge-content">
+                <span id="badge-status">SCANNER: ON</span>
+                <div class="badge-stats">
+                    <span id="badge-score">SC: 0.0</span>
+                    <span id="badge-rsi">RSI: 50.0</span>
+                </div>
+            </div>
+            <div class="badge-pulse"></div>
+        </div>
+        <div id="footer-controls" class="footer-bar">
+            <div class="control-left">
+                <span id="mini-eta" class="latency-label eta-label">ETA: ---</span>
+                <span id="mini-latency" class="latency-label">LATENCY: --ms</span>
+                <button id="start-stop-btn" class="btn btn-fixed">ATIVAR ROBO</button>
+            </div>
+            <div class="control-right">
+                <span id="trade-gale-level" class="gale-chip">M1</span>
+                <div id="tick-visualizer" class="tick-grid-footer">
+                    <div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div><div class="tick-item"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js?v=69.0"></script>
+</body>
+
+</html>
